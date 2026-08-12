@@ -1,65 +1,100 @@
-# WebTrace
+# ⚡ WebTrace — Website Performance Intelligence Engine
 
-**Website Performance Intelligence Engine**
+[![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Playwright](https://img.shields.io/badge/Playwright-Chromium-green?style=flat-square&logo=playwright)](https://playwright.dev/)
+[![D3.js](https://img.shields.io/badge/D3.js-v7-orange?style=flat-square&logo=d3.js)](https://d3js.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
 
-WebTrace is a developer-focused website performance analysis tool. It loads any public website in a real Chromium browser via Playwright, captures every network request, normalizes the raw telemetry into a structured data model, evaluates it against a deterministic rule engine, and renders an interactive performance dashboard with a D3.js network waterfall timeline.
+**WebTrace** is a developer-centric performance analysis engine. It loads any public website inside a real Chromium browser via Playwright, intercepts 100% of network traffic, normalizes raw telemetry into structured data records, evaluates it against a deterministic rule engine, and presents an interactive waterfall telemetry dashboard.
 
-WebTrace is **not** a Lighthouse clone. It doesn't guess — it measures. Every metric originates from captured network data, and every recommendation is backed by a deterministic engineering rule.
+> 💡 **No AI Guesswork, Zero Fake Data**: Every metric originates from real browser network activity, and every recommendation is backed by a deterministic engineering rule.
 
 ---
 
-## How It Works
+## 🎨 Design System & Theme
+
+WebTrace features a **Monochrome White & Black** design system inspired by high-end developer tools (*Mobius, Linear, Vercel, Sentry*):
+
+- ⚪ **Pure White (`#ffffff`) Canvas** — Clean, high-contrast visual clarity
+- ⬛ **Stark Black (`#000000`) Typography & Controls** — Ultra-readable typography with `Plus Jakarta Sans` & `JetBrains Mono`
+- 📐 **Hairline Grid Layout System** — 1px subtle border lines separating hero sections, metric cards, and feature pillars
+- 🖼️ **Custom 3D Telemetry Sculpture Asset** — Custom Mobius-loop matte black network node visual render (`public/hero-3d-white.png`)
+
+---
+
+## 🔁 Recent Changes: Added & Removed Summary
+
+### ➕ Added & Upgraded Features
+
+- 🎨 **White & Black Monochrome UI Theme**: Fully updated from dark-mode to a high-contrast white & black Mobius design reference layout.
+- 🖼️ **3D Hero Telemetry Sculpture**: Integrated custom 3D network node render with subtle technical specs overlays (`SYS::PLAYWRIGHT_ENGINE`, `SUB_MS_PRECISION`).
+- 🔤 **Google Typography Integration**: Configured `Plus Jakarta Sans` for clean sans-serif UI elements and `JetBrains Mono` for code & network telemetry.
+- 🛡️ **SSRF Security Protection (`lib/url.ts`)**: Built-in guardrails blocking private IPs (`127.0.0.1`, `localhost`, `10.x.x.x`, `172.16-31.x.x`, `192.168.x.x`, `169.254.x.x`) and non-HTTP protocols (`file://`, `ftp://`).
+- 📊 **D3.js Gantt Waterfall Chart (`components/waterfall/Waterfall.tsx`)**: Interactive timeline mapping asset execution sequence with color-coded pills, grid lines, and hover states.
+- 🔎 **Telemetry Inspector Drawer (`components/waterfall/RequestDrawer.tsx`)**: Slide-out panel providing deep visibility into HTTP status, response headers, transfer size, and MIME types.
+- 📋 **Filtered Telemetry Data Table (`components/requests/RequestTable.tsx`)**: Searchable and sortable request table with category tabs (HTML, Scripts, Styles, Images, Fonts, API, Failed, Third-Party).
+
+### 🗑️ Removed Features & Refactorings
+
+- 🗑️ **Demo Dataset Removal**: Deleted `lib/demo-data.ts` and all hardcoded mock fallback data.
+- 🗑️ **`isDemo` Flag & Branches Removed**: Removed all demo flags and conditional branches across `analysis-store.ts`, `app/api/analyze/route.ts`, `Header.tsx`, `Hero.tsx`, and `AnalysisHeader.tsx`.
+- 🗑️ **Mock Fallbacks Purged**: Every single metric displayed on the dashboard is now 100% real live network telemetry captured via Playwright.
+
+---
+
+## ⚙️ How It Works
 
 ```
-URL → Playwright Chromium → Capture Network Events → Normalize → Analyze → Score → Dashboard
+URL Input → Security Validation → Playwright Chromium → Intercept Telemetry → Normalization → 10 Audit Rules → Score Engine → Dashboard
 ```
 
-1. **User enters a URL** — validated with SSRF security protections
-2. **Playwright launches headless Chromium** — navigates to the target site
-3. **Network requests are intercepted** — every HTTP request/response is captured with status codes, timing, headers, and transfer sizes
-4. **Data is normalized** — raw Playwright events are mapped to WebTrace's internal `NetworkRequest` model
-5. **Analysis engine runs** — 10 deterministic rules evaluate the captured data
-6. **Performance score is calculated** — weighted penalty model producing a 0–100 score
-7. **Dashboard renders** — score card, metric widgets, issues panel, D3 waterfall, request table, and inspector drawer
+1. **User Submits URL** — Passed through `validateAndNormalizeUrl()` for SSRF and syntax validation.
+2. **Playwright Chromium Launch** — Headless browser opens target page under real network condition settings.
+3. **Telemetry Capture** — Every request/response cycle is intercepted, measuring duration, status codes, headers, and transfer byte sizes.
+4. **Data Normalization** — Raw browser events are mapped into structured `NetworkRequest` records.
+5. **Deterministic Audit Engine** — 10 engineering rules evaluate the site's network efficiency.
+6. **Scoring Model** — Calculates a 0–100 score based on weighted issue penalties.
+7. **Dashboard Render** — Score gauge, key metrics, resource bar, issue panel, D3 waterfall, and request drawer.
 
 ---
 
-## Tech Stack
+## 🚀 Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js (App Router) |
-| Language | TypeScript (strict) |
-| Styling | Tailwind CSS |
-| State | Zustand |
-| Browser Automation | Playwright + Chromium |
-| Visualization | D3.js (waterfall timeline) |
-| Icons | Lucide React |
+| Layer | Technology | Details |
+|---|---|---|
+| 💻 **Framework** | Next.js (App Router) | React Server Components + Client Hooks |
+| 📘 **Language** | TypeScript | Strict typing across all network & engine models |
+| 🎨 **Styling** | Tailwind CSS | Custom fonts, hairline grid patterns, light theme tokens |
+| 🧠 **State Management** | Zustand | Single store managing analysis state & filtering |
+| 🌐 **Automation** | Playwright + Chromium | Headless browser network event interception |
+| 📈 **Visualization** | D3.js | SVG horizontal Gantt waterfall timeline chart |
+| 🔣 **Icons & Fonts** | Lucide React + Google Fonts | Plus Jakarta Sans & JetBrains Mono |
 
 ---
 
-## Getting Started
+## 🛠️ Getting Started
 
 ### Prerequisites
 
-- **Node.js** ≥ 18
-- **npm** ≥ 9
+- **Node.js** ≥ 18.x
+- **npm** ≥ 9.x
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd webtrace
+# 1. Clone repository
+git clone https://github.com/Cyberpunk738/Webtrace.git
+cd Webtrace
 
-# Install dependencies
+# 2. Install NPM dependencies
 npm install
 
-# Install Playwright Chromium browser
+# 3. Install Playwright Chromium browser binary
 npx playwright install chromium
 ```
 
-### Development
+### Running Locally
 
 ```bash
 npm run dev
@@ -74,7 +109,7 @@ npm run build
 npm run start
 ```
 
-### Run Tests
+### Automated Unit Tests
 
 ```bash
 npm run test
@@ -82,193 +117,152 @@ npm run test
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
-webtrace/
+Webtrace/
 ├── app/
-│   ├── page.tsx                    # Main page — landing hero + dashboard
-│   ├── layout.tsx                  # Root layout with header
-│   ├── globals.css                 # Tailwind directives + custom scrollbars
+│   ├── page.tsx                    # Main landing & dashboard container
+│   ├── layout.tsx                  # Root layout with Google Fonts & Header
+│   ├── globals.css                 # Theme tokens, grid patterns, custom scrollbars
 │   └── api/
 │       └── analyze/
-│           └── route.ts            # POST /api/analyze endpoint
+│           └── route.ts            # POST /api/analyze execution endpoint
 │
 ├── components/
 │   ├── landing/
-│   │   ├── Header.tsx              # Sticky nav header
-│   │   ├── Hero.tsx                # Landing hero with URL input
-│   │   └── UrlInput.tsx            # URL input bar with validation
+│   │   ├── Header.tsx              # Mobius-style top navigation bar
+│   │   ├── Hero.tsx                # 2-Column split hero with 3D sculpture & feature grid
+│   │   └── UrlInput.tsx            # URL validation & input action bar
 │   │
 │   ├── analysis/
-│   │   ├── AnalysisHeader.tsx      # Progress stages + error + result header
-│   │   ├── ScoreCard.tsx           # Circular gauge score widget
-│   │   ├── MetricCard.tsx          # Reusable metric display card
-│   │   ├── ResourceBreakdown.tsx   # Segmented resource distribution bar
-│   │   └── IssuesPanel.tsx         # Categorized performance issues list
+│   │   ├── AnalysisHeader.tsx      # Progress stages & domain header
+│   │   ├── ScoreCard.tsx           # SVG circular score gauge
+│   │   ├── MetricCard.tsx          # Key metric display widgets
+│   │   ├── ResourceBreakdown.tsx   # Segmented payload distribution bar
+│   │   └── IssuesPanel.tsx         # Categorized performance audit issue list
 │   │
 │   ├── waterfall/
-│   │   ├── Waterfall.tsx           # D3.js interactive Gantt waterfall
-│   │   └── RequestDrawer.tsx       # Slide-out request inspector drawer
+│   │   ├── Waterfall.tsx           # D3.js Gantt network waterfall chart
+│   │   └── RequestDrawer.tsx       # Slide-out HTTP header & telemetry inspector drawer
 │   │
 │   └── requests/
-│       ├── RequestTable.tsx        # Sortable/filterable request data table
-│       └── RequestFilters.tsx      # Category filter pills + search input
+│       ├── RequestTable.tsx        # Sortable telemetry data table
+│       └── RequestFilters.tsx      # Resource type filter pills & search box
 │
 ├── crawler/
-│   ├── browser.ts                  # Playwright browser launch + context
-│   ├── capture.ts                  # Network event interception logic
-│   └── types.ts                    # Crawler-specific type definitions
+│   ├── browser.ts                  # Playwright browser instance launcher
+│   ├── capture.ts                  # Network request interception logic
+│   └── types.ts                    # Crawler options & timing interfaces
 │
 ├── engine/
-│   ├── analyzer.ts                 # Assembles full AnalysisResult
-│   ├── normalizer.ts               # Maps raw events → NetworkRequest
-│   ├── scoring.ts                  # Deterministic 0–100 scoring model
+│   ├── analyzer.ts                 # Full AnalysisResult builder
+│   ├── normalizer.ts               # Raw browser event normalizer
+│   ├── scoring.ts                  # Deterministic 0–100 score engine
 │   └── rules/
-│       ├── index.ts                # Rule runner (executes all rules)
-│       ├── large-javascript.ts     # JS bundles > 500 KB
-│       ├── large-images.ts         # Images > 200 KB
-│       ├── large-css.ts            # CSS files > 200 KB
-│       ├── slow-requests.ts        # Requests > 1000 ms
-│       ├── slow-api.ts             # XHR/Fetch > 1000 ms
-│       ├── failed-requests.ts      # 4xx, 5xx, net errors
-│       ├── request-count.ts        # Total requests > 100
-│       ├── third-party.ts          # Third-party domain ratio
-│       ├── duplicate-requests.ts   # Repeated static asset URLs
-│       └── large-page.ts           # Total transfer > 5 MB
+│       ├── index.ts                # Audit rule suite runner
+│       ├── large-javascript.ts     # Rule 1: JS bundle > 500 KB
+│       ├── large-images.ts         # Rule 2: Image asset > 200 KB
+│       ├── slow-requests.ts        # Rule 3: Duration > 1000 ms
+│       ├── failed-requests.ts      # Rule 4: HTTP 4xx, 5xx, or network error
+│       ├── request-count.ts        # Rule 5: Total request count > 100
+│       ├── third-party.ts          # Rule 6: External domain ratio
+│       ├── large-page.ts           # Rule 7: Total transfer > 5 MB
+│       ├── slow-api.ts             # Rule 8: XHR/Fetch duration > 1000 ms
+│       ├── duplicate-requests.ts   # Rule 9: Identical asset URL re-fetching
+│       └── large-css.ts            # Rule 10: CSS stylesheet > 200 KB
 │
 ├── lib/
-│   ├── url.ts                      # URL validation + SSRF protection
-│   └── format.ts                   # Byte, duration, number formatters
+│   ├── url.ts                      # SSRF security validation & hostname normalizer
+│   └── format.ts                   # Byte, time duration, and number formatters
+│
+├── public/
+│   └── hero-3d-white.png           # Custom 3D network node sculpture render
 │
 ├── store/
-│   └── analysis-store.ts           # Zustand client state
+│   └── analysis-store.ts           # Zustand store for application state
 │
 ├── types/
-│   ├── network.ts                  # NetworkRequest interface
-│   ├── analysis.ts                 # AnalysisResult interface
+│   ├── network.ts                  # NetworkRequest & RawCapturedEvent models
+│   ├── analysis.ts                 # AnalysisResult & Summary models
 │   └── issues.ts                   # PerformanceIssue interface
 │
-├── tests/
-│   ├── engine.test.ts              # Analysis engine unit tests
-│   └── run-tests.ts                # Test runner script
-│
+├── README.md
 ├── package.json
-├── tsconfig.json
-├── tailwind.config.js
-├── postcss.config.js
-└── project.md                      # Full project specification
+└── tsconfig.json
 ```
 
 ---
 
-## Analysis Rules
+## 🔍 Deterministic Audit Rules
 
-WebTrace ships with 10 built-in deterministic performance rules:
+WebTrace evaluates network telemetry against **10 built-in engineering rules**:
 
-| # | Rule | Trigger | Severity |
-|---|---|---|---|
-| 1 | **Large JavaScript** | JS bundle > 500 KB | warning / critical |
-| 2 | **Large Images** | Image > 200 KB | warning / critical |
-| 3 | **Slow Requests** | Any request > 1000 ms | warning / critical |
-| 4 | **Failed Requests** | HTTP 4xx, 5xx, or network error | critical |
-| 5 | **Excessive Requests** | Total requests > 100 | warning / critical |
-| 6 | **Third-Party Overhead** | High ratio of external domain requests | info / warning |
-| 7 | **Heavy Page** | Total transfer > 5 MB | warning / critical |
-| 8 | **Slow API** | XHR/Fetch request > 1000 ms | warning / critical |
-| 9 | **Duplicate Requests** | Same static asset URL requested multiple times | warning |
-| 10 | **Large CSS** | CSS file > 200 KB | warning / critical |
-
----
-
-## Performance Scoring
-
-The scoring model starts at 100 and applies weighted penalties per detected issue:
-
-```
-Base Score = 100
-
-Large JS:           -8 (warning) / -15 (critical)
-Large Images:       -6 (warning) / -12 (critical)
-Slow Requests:      -6 (warning) / -12 (critical)
-Failed Requests:    -5 per failure (capped at -25)
-High Request Count: -8 (warning) / -15 (critical)
-Third-Party:        -4 (info)    / -8  (warning)
-Heavy Page:         -8 (warning) / -15 (critical)
-Slow API:           -6 (warning) / -12 (critical)
-Duplicate Requests: -5
-Large CSS:          -5 (warning) / -10 (critical)
-```
-
-Score categories:
-
-| Range | Category |
-|---|---|
-| 90–100 | Excellent |
-| 75–89 | Good |
-| 50–74 | Needs Improvement |
-| 0–49 | Poor |
-
-The score is a **WebTrace heuristic**. It is not equivalent to Lighthouse or any other performance score.
+| # | Icon | Rule Name | Trigger Condition | Severity | Penalty |
+|---|---|---|---|---|---|
+| 1 | 📦 | **Large JavaScript** | JS Bundle > 500 KB / 1 MB | Warning / Critical | -8 / -15 |
+| 2 | 🖼️ | **Large Images** | Image File > 200 KB / 500 KB | Warning / Critical | -6 / -12 |
+| 3 | ⏳ | **Slow Requests** | Duration > 1000 ms | Warning / Critical | -6 / -12 |
+| 4 | ❌ | **Failed Requests** | HTTP 4xx, 5xx, or Network Error | Critical | -5 per fail (max -25) |
+| 5 | 🔢 | **Excessive Requests** | Total Requests > 100 | Warning / Critical | -8 / -15 |
+| 6 | 🌐 | **Third-Party Bloat** | External Domain Ratio > 30% | Info / Warning | -4 / -8 |
+| 7 | 🐘 | **Heavy Page** | Total Transfer > 5 MB | Warning / Critical | -8 / -15 |
+| 8 | 📡 | **Slow API Calls** | XHR/Fetch Duration > 1000 ms | Warning / Critical | -6 / -12 |
+| 9 | 🔄 | **Duplicate Requests** | Same asset URL fetched multiple times | Warning | -5 |
+| 10 | 🎨 | **Large CSS** | Stylesheet > 200 KB | Warning / Critical | -5 / -10 |
 
 ---
 
-## Security
+## 🛡️ Security & SSRF Protection
 
-WebTrace validates all user-submitted URLs before browser navigation:
+WebTrace enforces strict URL validation before launching Playwright browser contexts:
 
-- **Protocol enforcement** — only `http://` and `https://` allowed
-- **SSRF protection** — blocks `localhost`, `127.0.0.1`, `0.0.0.0`, `::1`, private IP ranges (`10.x.x.x`, `172.16-31.x.x`, `192.168.x.x`), and link-local addresses (`169.254.x.x`)
-- **Protocol filtering** — rejects `file://`, `ftp://`, and custom schemes
-- **Domain validation** — requires a valid TLD structure
-
----
-
-## Dashboard Features
-
-- **Performance Score Gauge** — Animated circular SVG gauge with color-coded category
-- **Key Metric Cards** — Total requests, transfer size, load time, failed requests, third-party count
-- **Resource Distribution Bar** — Visual segmented bar showing HTML / JS / CSS / Image / Font / API / Other ratios
-- **Performance Issues Panel** — Severity-grouped issue list with descriptions, recommendations, and links to affected requests
-- **D3 Network Waterfall** — Interactive horizontal Gantt timeline with color-coded resource bars, click-to-inspect, and duration labels
-- **Request Data Table** — Filterable by resource type (All, Documents, Scripts, Styles, Images, Fonts, API, Failed, Third-Party), searchable by URL/domain, sortable by name/size/duration/status
-- **Request Inspector Drawer** — Slide-out panel showing full URL, method, status, headers, MIME type, transfer size, timing offsets, and third-party status
+- ✅ **Protocol White-listing**: Only `http://` and `https://` schemes permitted. Rejects `file://`, `ftp://`, `data:`, `gopher://`.
+- ✅ **Private IP & Loopback Blocking**: Restricts requests targeting `localhost`, `127.0.0.1`, `0.0.0.0`, `::1`.
+- ✅ **Intranet CIDR Blocklist**: Rejects private IP ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`).
+- ✅ **Domain Validation**: Validates hostname format and TLD syntax.
 
 ---
 
-## API Reference
+## 🔌 API Reference
 
-### POST `/api/analyze`
+### `POST /api/analyze`
 
-Analyzes a target website URL.
+Executes a live browser network audit on the provided target URL.
 
-**Request Body:**
-
+#### Request Body
 ```json
 {
   "url": "https://example.com"
 }
 ```
 
-**Success Response (200):**
-
+#### Response (`200 OK`)
 ```json
 {
   "success": true,
   "result": {
     "url": "https://example.com",
     "domain": "example.com",
-    "timestamp": "2026-08-12T09:00:00.000Z",
+    "timestamp": "2026-08-12T11:00:00.000Z",
     "summary": {
-      "score": 85,
-      "scoreCategory": "Good",
-      "requestCount": 47,
-      "totalTransferSize": 2340000,
-      "totalDuration": 1850,
+      "score": 92,
+      "scoreCategory": "Excellent",
+      "requestCount": 24,
+      "totalTransferSize": 1420000,
+      "totalDuration": 1250,
       "failedRequests": 0,
-      "thirdPartyRequests": 12
+      "thirdPartyRequests": 3
     },
-    "resources": { ... },
+    "resources": {
+      "document": 1,
+      "scripts": 8,
+      "stylesheets": 3,
+      "images": 10,
+      "fonts": 2,
+      "api": 0,
+      "other": 0
+    },
     "requests": [ ... ],
     "issues": [ ... ],
     "timing": { ... }
@@ -276,29 +270,8 @@ Analyzes a target website URL.
 }
 ```
 
-**Error Response (400/502/500):**
-
-```json
-{
-  "success": false,
-  "error": "Descriptive error message"
-}
-```
-
 ---
 
-## Design Philosophy
+## 📜 License
 
-WebTrace follows a developer-tool design language inspired by Chrome DevTools, Vercel, Linear, and Sentry:
-
-- **Dark-first** — slate/zinc background palette
-- **Monospace typography** — JetBrains Mono / Inter
-- **Information-dense** — compact layouts prioritizing data over decoration
-- **No fake data** — every displayed metric originates from real captured network telemetry
-- **No AI** — all analysis is deterministic engineering logic
-
----
-
-## License
-
-This project is for educational and portfolio purposes.
+Distributed under the MIT License. Built for developer performance intelligence.
