@@ -27,23 +27,7 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Center Nav Items (Mobius-Style) */}
-        <nav className="hidden md:flex items-center gap-10 font-sans text-xs font-semibold text-slate-600">
-          <a href="#platform" onClick={reset} className="hover:text-black transition-colors">
-            Platform
-          </a>
-          <a href="#rules" onClick={reset} className="hover:text-black transition-colors">
-            Telemetry Rules
-          </a>
-          <a href="#waterfall" onClick={reset} className="hover:text-black transition-colors">
-            Waterfall Timeline
-          </a>
-          <a href="#security" onClick={reset} className="hover:text-black transition-colors">
-            Security & SSRF
-          </a>
-        </nav>
-
-        {/* Right CTA Button (Mobius-Style Solid Black Button) */}
+        {/* Action Button */}
         <div className="flex items-center gap-3">
           {status === 'complete' ? (
             <button
