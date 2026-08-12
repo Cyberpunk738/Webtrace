@@ -1,9 +1,22 @@
 import type { Metadata } from 'next';
+import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/landing/Header';
 
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
-  title: 'WebTrace — Developer Performance Intelligence Engine',
+  title: 'WebTrace — Website Performance Intelligence Engine',
   description:
     'Real-time website performance telemetry, network waterfall analysis, asset size profiling, and deterministic engineering rule audit engine.',
 };
@@ -14,10 +27,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-[#090d16] text-slate-100 antialiased selection:bg-sky-500 selection:text-slate-950">
+    <html lang="en">
+      <body className={`${plusJakarta.variable} ${jetbrainsMono.variable} bg-white text-slate-900 font-sans antialiased selection:bg-slate-900 selection:text-white min-h-screen flex flex-col`}>
         <Header />
-        <main>{children}</main>
+        <main className="flex-1">{children}</main>
       </body>
     </html>
   );

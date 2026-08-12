@@ -29,10 +29,10 @@ export const RequestFilters: React.FC = () => {
             <button
               key={c.key}
               onClick={() => setFilterType(c.key)}
-              className={`rounded-md px-2.5 py-1 font-mono text-xs font-medium transition-all ${
+              className={`rounded-md px-3 py-1 font-mono text-xs font-semibold transition-all ${
                 isActive
-                  ? 'bg-sky-500 text-slate-950 font-bold shadow-sm'
-                  : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+                  ? 'bg-black text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-black border border-slate-200'
               }`}
             >
               {c.label}
@@ -49,7 +49,7 @@ export const RequestFilters: React.FC = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter by name or domain..."
-          className="w-full rounded-lg border border-slate-800 bg-slate-950 pl-8 pr-3 py-1.5 font-mono text-xs text-slate-200 placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+          className="w-full rounded-lg border border-slate-300 bg-white pl-8 pr-3 py-1.5 font-mono text-xs text-slate-900 placeholder-slate-400 focus:border-black focus:outline-none shadow-xs"
         />
       </div>
     </div>

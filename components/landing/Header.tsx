@@ -8,31 +8,60 @@ export const Header: React.FC = () => {
   const { status, reset } = useAnalysisStore();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-800 bg-[#090d16]/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={reset}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-400">
-            <Activity className="h-5 w-5" />
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+        {/* Brand logo */}
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={reset}>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white group-hover:bg-slate-800 transition-colors">
+            <Activity className="h-4 w-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-lg font-bold tracking-wider text-slate-100">WebTrace</span>
-              <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-mono font-medium text-sky-400 border border-sky-500/20">
-                MVP v1.0
+              <span className="font-sans text-lg font-bold tracking-tight text-slate-900">
+                WebTrace
+              </span>
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-600 border border-slate-200">
+                v1.0
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Website Performance Intelligence Engine</p>
           </div>
         </div>
 
+        {/* Center Nav Items (Mobius-Style) */}
+        <nav className="hidden md:flex items-center gap-10 font-sans text-xs font-semibold text-slate-600">
+          <a href="#platform" onClick={reset} className="hover:text-black transition-colors">
+            Platform
+          </a>
+          <a href="#rules" onClick={reset} className="hover:text-black transition-colors">
+            Telemetry Rules
+          </a>
+          <a href="#waterfall" onClick={reset} className="hover:text-black transition-colors">
+            Waterfall Timeline
+          </a>
+          <a href="#security" onClick={reset} className="hover:text-black transition-colors">
+            Security & SSRF
+          </a>
+        </nav>
+
+        {/* Right CTA Button (Mobius-Style Solid Black Button) */}
         <div className="flex items-center gap-3">
-          {status === 'complete' && (
+          {status === 'complete' ? (
             <button
               onClick={reset}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700 hover:text-white transition-all"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 font-sans text-xs font-bold text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
             >
-              <Terminal className="h-3.5 w-3.5 text-sky-400" />
+              <Terminal className="h-3.5 w-3.5 text-slate-700" />
               Analyze New Site
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                const inputEl = document.querySelector('input[type="text"]') as HTMLInputElement;
+                if (inputEl) inputEl.focus();
+              }}
+              className="flex items-center gap-2 rounded-lg bg-black px-4 py-2.5 font-sans text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-sm"
+            >
+              <span>Start analysis</span>
             </button>
           )}
         </div>
