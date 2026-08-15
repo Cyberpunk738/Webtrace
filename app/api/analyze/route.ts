@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAndNormalizeUrl } from '@/lib/url';
 import { captureNetworkActivity } from '@/crawler/capture';
+import { captureNetworkActivityFallback } from '@/crawler/fetch-capture';
 import { normalizeCapturedEvents } from '@/engine/normalizer';
 import { runPerformanceAnalysis } from '@/engine/analyzer';
 
-export const maxDuration = 60; // allowable timeout on modern serverless/Node
+export const maxDuration = 60; // max duration for Vercel functions
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,35 +30,43 @@ export async function POST(req: NextRequest) {
     const targetUrl = validation.normalizedUrl;
     const targetDomain = validation.domain;
 
+    let captureResult;
     try {
-      const captureResult = await captureNetworkActivity(targetUrl, {
-        timeoutMs: 25000,
+      // Try Playwright Chromium network capture first
+      captureResult = await captureNetworkActivity(targetUrl, {
+        timeoutMs: 20000,
       });
+    } catch (captureErr) {
+      console.warn('Playwright capture failed or unsupported in host environment. Triggering HTTP telemetry fallback...', captureErr);
+      try {
+        // Fall back to server-side HTTP fetch telemetry capturer
+        captureResult = await captureNetworkActivityFallback(targetUrl);
+      } catch (fallbackErr: unknown) {
+        const errorMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+        
+        let userFriendlyError = 'WebTrace encountered an error analyzing this website.';
+        if (errorMsg.includes('Timeout') || errorMsg.includes('ERR_TIMED_OUT')) {
+          userFriendlyError = 'The website took too long to respond (Navigation Timeout).';
+        } else if (errorMsg.includes('ERR_NAME_NOT_RESOLVED') || errorMsg.includes('ERR_CONNECTION_REFUSED') || errorMsg.includes('fetch failed')) {
+          userFriendlyError = "WebTrace couldn't reach this website. The site may be offline or unavailable.";
+        }
 
-      const normalizedRequests = normalizeCapturedEvents(captureResult.rawEvents, targetDomain);
-      const analysisResult = runPerformanceAnalysis(targetUrl, normalizedRequests, {
-        navigationStart: captureResult.timing.navigationStart,
-        firstRequest: captureResult.timing.firstRequestTime,
-        lastResponse: captureResult.timing.lastResponseTime,
-        totalLoadTime: captureResult.timing.totalLoadTime,
-      });
-
-      return NextResponse.json({ success: true, result: analysisResult });
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      
-      let userFriendlyError = 'WebTrace encountered an error analyzing this website.';
-      if (errorMsg.includes('Timeout') || errorMsg.includes('ERR_TIMED_OUT')) {
-        userFriendlyError = 'The website took too long to respond (Navigation Timeout).';
-      } else if (errorMsg.includes('ERR_NAME_NOT_RESOLVED') || errorMsg.includes('ERR_CONNECTION_REFUSED')) {
-        userFriendlyError = "WebTrace couldn't reach this website. The site may be offline or unavailable.";
+        return NextResponse.json(
+          { success: false, error: userFriendlyError },
+          { status: 502 }
+        );
       }
-
-      return NextResponse.json(
-        { success: false, error: userFriendlyError },
-        { status: 502 }
-      );
     }
+
+    const normalizedRequests = normalizeCapturedEvents(captureResult.rawEvents, targetDomain);
+    const analysisResult = runPerformanceAnalysis(targetUrl, normalizedRequests, {
+      navigationStart: captureResult.timing.navigationStart,
+      firstRequest: captureResult.timing.firstRequestTime,
+      lastResponse: captureResult.timing.lastResponseTime,
+      totalLoadTime: captureResult.timing.totalLoadTime,
+    });
+
+    return NextResponse.json({ success: true, result: analysisResult });
   } catch {
     return NextResponse.json(
       { success: false, error: 'An unexpected server error occurred.' },

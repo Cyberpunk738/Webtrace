@@ -10,11 +10,13 @@
     "test": "npx tsx tests/run-tests.ts"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^149.0.0",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
     "lucide-react": "^1.31.0",
     "next": "^16.3.0",
     "playwright": "^1.62.1",
+    "playwright-core": "^1.62.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "recharts": "^3.10.1",
