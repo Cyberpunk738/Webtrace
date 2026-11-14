@@ -1,0 +1,34 @@
+name: WebTrace checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:capture
+      - name: Desktop and mobile report flows
+        shell: bash
+        run: |
+          npm start > /tmp/webtrace-server.log 2>&1 &
+          webtrace_server_pid=$!
+          trap 'kill "$webtrace_server_pid" 2>/dev/null || true' EXIT
+          node -e 'async function ready() { for (let i=0;i<30;i++) { try { if ((await fetch("http://127.0.0.1:3000")).ok) return; } catch {} await new Promise(r=>setTimeout(r,1000)); } process.exit(1); } ready();'
+          npm run test:browser

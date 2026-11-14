@@ -1,263 +1,96 @@
-# WebTrace — Website Performance Intelligence Engine
+# WebTrace
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Playwright](https://img.shields.io/badge/Playwright-Chromium-green?style=flat-square&logo=playwright)](https://playwright.dev/)
-[![D3.js](https://img.shields.io/badge/D3.js-v7-orange?style=flat-square&logo=d3.js)](https://d3js.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
+A website network inspector built with Next.js, Playwright, TypeScript and Zustand. Trace a public website, find slow or oversized resources, and compare your next run after making a fix.
 
-WebTrace is a developer-centric performance analysis engine designed to capture, profile, and audit web application network activity. Unlike synthetic Lighthouse scores or simulated benchmarks, WebTrace instrumentally loads public web applications inside a headless Chromium browser using Playwright, intercepts 100% of network payloads, normalizes raw network telemetry, and evaluates performance bottlenecks against a deterministic engineering rule engine.
+## What you can do
 
----
+- Capture browser requests and inspect their status, duration, encoded body size and response headers.
+- Run ten network audit rules, from large JavaScript and images to failed and duplicate requests.
+- Explore a scrollable waterfall and searchable, sortable request table with keyboard-accessible request inspection.
+- Keep the five most recent reports in browser storage; reopen them after a refresh or clear them at any time.
+- Compare a report with the previous saved run of the exact same URL, final destination and capture type.
+- Download a JSON report or CSV request list. Headers are excluded from exports and saved reports. CSV cells are escaped to prevent formula execution.
 
-## 🏗️ Core Architecture
+The interface uses a dark grid, condensed display typography, bright yellow/violet/pink cards and playful illustrations. The same palette carries through the loading, error, report and inspector views. It supports mobile layouts and reduced-motion preferences.
 
-The application is structured into decoupled modules: Browser Automation, Data Normalization, Rule Engine, Global State Management, and Data Visualization.
+## Capture modes and accuracy
 
-```text
-┌─────────────────┐     ┌──────────────────────┐     ┌────────────────────────┐
-│  Target Website │ ──> │ Playwright Chromium  │ ──> │ Raw Captured Network   │
-│      (URL)      │     │ Event Interception   │     │ Payloads & Timings     │
-└─────────────────┘     └──────────────────────┘     └────────────────────────┘
-                                                                 │
-                                                                 ▼
-┌─────────────────┐     ┌──────────────────────┐     ┌────────────────────────┐
-│ Interactive D3  │ <── │ Zustand Store        │ <── │ Normalizer & Audit     │
-│ Gantt Waterfall │     │ React Client UI      │     │ Deterministic Engine   │
-└─────────────────┘     └──────────────────────┘     └────────────────────────┘
-```
+**Browser capture** opens Chromium, waits for DOM content, then observes another 1.5 seconds of network activity. Request durations end at body completion rather than response headers. Body sizes come from Playwright's encoded response size. Unfinished requests are reported as failures or pending at the capture boundary. Service workers and WebSockets are blocked for this bounded HTTP inspection.
 
-### Data Pipeline Sequence
+**Limited HTTP inspection** is used if browser capture cannot run. It fetches the document and up to 30 unique static script, stylesheet and image references with four concurrent workers. It records actual fetch durations, decoded body bytes, status codes and failures. It does not execute JavaScript, parse CSS imports, discover lazy content, or reproduce browser loading order. Each report prominently identifies its capture mode and limitations; no timings, sizes or successful responses are invented.
 
-1. **URL Validation & Security Guardrails**: The input URL is validated and checked against Server-Side Request Forgery (SSRF) restrictions.
-2. **Headless Browser Execution**: Playwright launches a headless Chromium instance, navigating to the target website and capturing network request/response lifecycle events.
-3. **Telemetry Normalization**: Raw Playwright network events are mapped into normalized `NetworkRequest` interface records, categorizing assets into `document`, `script`, `stylesheet`, `image`, `font`, `xhr/fetch`, or `other`.
-4. **Deterministic Audit Suite**: 10 engineering rules evaluate request size, load duration, failure status, 3rd party domain ratios, and duplicate fetches.
-5. **Scoring Engine**: Evaluates cumulative weighted penalties to compute a 0–100 performance score.
-6. **State & UI Rendering**: Hydrates the client-side Zustand store to render key metric widgets, D3 Gantt waterfall charts, filterable request tables, and a slide-out telemetry inspector.
+The score is a deterministic network audit heuristic, not a Lighthouse score, rendering metric or Core Web Vitals measurement. HTTP scores are partial. Capture time describes the observation window; run comparisons can vary with network conditions.
 
----
+HTTP inspection has an 18-second shared fetch deadline and decoded body limits of 2 MiB for the document and 8 MiB for each resource. Main-document network or size-limit failures return an error. Individual resource failures remain visible in the report.
 
-## ✨ Key Technical Features
+## Run locally
 
-- 🌐 **Real Browser Network Telemetry**: Zero synthetic estimates. Captures real status codes, HTTP headers, exact durations, and transfer payload sizes.
-- 📊 **D3.js Gantt Waterfall Timeline**: High-performance SVG Gantt timeline visualizing asset loading sequences, request offsets, and concurrency bottlenecks.
-- 🔎 **Request Telemetry Inspector**: Slide-out drawer displaying detailed HTTP request metadata, response headers, MIME types, and timing offsets.
-- 🛡️ **SSRF Security Layer**: Strict protocol white-listing (`http://`, `https://`) and CIDR blocklisting preventing intranet probing (`127.0.0.1`, `localhost`, `10.x.x.x`, `172.16-31.x.x`, `192.168.x.x`).
-- 🗂️ **Filterable Data Table**: Sortable request data table with real-time category filtering (HTML, Scripts, Styles, Images, Fonts, API, Failed, 3rd-Party) and text search.
-
----
-
-## 📐 Audit Rules & Scoring Engine
-
-WebTrace evaluates network activity using 10 deterministic engineering rules:
-
-| # | Rule Name | Trigger Condition | Severity | Penalty |
-|---|---|---|---|---|
-| 1 | **Large JavaScript** | JS Bundle > 500 KB / 1 MB | Warning / Critical | -8 / -15 |
-| 2 | **Large Images** | Image File > 200 KB / 500 KB | Warning / Critical | -6 / -12 |
-| 3 | **Slow Requests** | Request Duration > 1000 ms | Warning / Critical | -6 / -12 |
-| 4 | **Failed Requests** | HTTP 4xx, 5xx, or Network Error | Critical | -5 per fail (max -25) |
-| 5 | **Excessive Requests** | Total Request Count > 100 | Warning / Critical | -8 / -15 |
-| 6 | **Third-Party Bloat** | External Domain Ratio > 30% | Info / Warning | -4 / -8 |
-| 7 | **Heavy Page** | Total Transfer Size > 5 MB | Warning / Critical | -8 / -15 |
-| 8 | **Slow API Calls** | XHR/Fetch Duration > 1000 ms | Warning / Critical | -6 / -12 |
-| 9 | **Duplicate Requests** | Identical asset URL fetched multiple times | Warning | -5 |
-| 10 | **Large CSS** | Stylesheet > 200 KB | Warning / Critical | -5 / -10 |
-
-### Scoring Heuristic
-
-```
-Base Score = 100
-Final Score = Max(0, Base Score - Cumulative Rule Penalties)
-```
-
-| Score Range | Category |
-|---|---|
-| 90 – 100 | Excellent |
-| 75 – 89 | Good |
-| 50 – 74 | Needs Improvement |
-| 0 – 49 | Poor |
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technology | Function |
-|---|---|---|
-| **Framework** | Next.js (App Router) | React Server Components & API Route Handler |
-| **Language** | TypeScript | Strict type definitions across network schemas and rule engine |
-| **Automation** | Playwright + Chromium | Headless browser execution & network interception |
-| **State** | Zustand | Single store managing application state & filtering |
-| **Visualization** | D3.js | Dynamic SVG Gantt chart timeline rendering |
-| **Styling** | Tailwind CSS | Utility-first layout & typography styling |
-| **Icons & Fonts** | Lucide React + Google Fonts | Plus Jakarta Sans & JetBrains Mono |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js** ≥ 18.x
-- **npm** ≥ 9.x
-
-### Installation
+Use Node.js 20.9 or newer.
 
 ```bash
-# Clone repository
-git clone https://github.com/Cyberpunk738/Webtrace.git
-cd Webtrace
-
-# Install dependencies
-npm install
-
-# Install Playwright Chromium browser binary
+npm ci
 npx playwright install chromium
-```
-
-### Development Server
-
-```bash
 npm run dev
 ```
 
-Application starts at `http://localhost:3000`.
-
-### Production Build & Test
+Open http://localhost:3000. Production/serverless environments try `@sparticuz/chromium`, with standard Playwright as a fallback.
 
 ```bash
-# Build optimized production bundle
+npm test
+npm run typecheck
 npm run build
-npm run start
-
-# Execute engine unit tests
-npm run test
+npm start
 ```
 
----
+`npm test` covers the analysis engine plus deterministic tests for fallback measurements, failures, redirect validation, response bounds, exports, comparison matching and stale/canceled requests. It uses mocked network responses and needs no external sites or browser installation.
 
-## 📁 Directory Structure
+With the app running, exercise desktop/mobile layouts and report interactions:
 
-```text
-Webtrace/
-├── app/
-│   ├── page.tsx                    # Main landing & dashboard view
-│   ├── layout.tsx                  # Root layout & Google Font loaders
-│   ├── globals.css                 # Base styles & theme utilities
-│   └── api/
-│       └── analyze/
-│           └── route.ts            # POST /api/analyze execution endpoint
-│
-├── components/
-│   ├── landing/
-│   │   ├── Header.tsx              # Top navigation bar
-│   │   ├── Hero.tsx                # Hero section with 3D sculpture display
-│   │   └── UrlInput.tsx            # URL validation & form control
-│   │
-│   ├── analysis/
-│   │   ├── AnalysisHeader.tsx      # Progress loader & result domain header
-│   │   ├── ScoreCard.tsx           # SVG score gauge widget
-│   │   ├── MetricCard.tsx          # Key metric display widgets
-│   │   ├── ResourceBreakdown.tsx   # Segmented payload ratio bar
-│   │   └── IssuesPanel.tsx         # Categorized performance issue list
-│   │
-│   ├── waterfall/
-│   │   ├── Waterfall.tsx           # D3.js Gantt network waterfall chart
-│   │   └── RequestDrawer.tsx       # HTTP header & telemetry inspector drawer
-│   │
-│   └── requests/
-│       ├── RequestTable.tsx        # Sortable request telemetry table
-│       └── RequestFilters.tsx      # Category filter pills & search input
-│
-├── crawler/
-│   ├── browser.ts                  # Chromium launch configuration
-│   ├── capture.ts                  # Playwright network listener
-│   └── types.ts                    # Crawler options & timing interfaces
-│
-├── engine/
-│   ├── analyzer.ts                 # Assembles final AnalysisResult
-│   ├── normalizer.ts               # Maps raw events to NetworkRequest schema
-│   ├── scoring.ts                  # Deterministic 0-100 score engine
-│   └── rules/                      # Individual audit rule implementations
-│
-├── lib/
-│   ├── url.ts                      # SSRF protection & URL normalizer
-│   └── format.ts                   # Byte, duration, and number formatters
-│
-├── store/
-│   └── analysis-store.ts           # Zustand global state manager
-│
-├── types/
-│   ├── network.ts                  # Network request & raw event interfaces
-│   ├── analysis.ts                 # Analysis result & summary interfaces
-│   └── issues.ts                   # Performance issue interface
-│
-├── README.md
-├── package.json
-└── tsconfig.json
+```bash
+npm run test:browser
+npm run test:capture
+# Optional for a system Chromium or a different server:
+CHROMIUM_PATH=/path/to/chromium TEST_BASE_URL=http://localhost:3000 npm run test:browser
 ```
 
----
+The capture test runs real Chromium against a local HTTP fixture to check redirects, delayed body completion, measured bytes, failures, unfinished requests and browser cleanup. Only its launcher and URL guard are injected to permit that trusted local fixture.
 
-## 🔌 API Specification
+The browser smoke test uses a clearly defined fixture for successful reports, tests the real endpoint's rejection of loopback URLs, and writes screenshots into the ignored `test-results/` directory. It checks validation, tabs, failed-request filtering, inspector dismissal, CSV download, repeat-run comparison, persistence, clearing history and horizontal overflow.
 
-### `POST /api/analyze`
+## Privacy and deployment
 
-Executes browser instrumentation and performance evaluation for a given URL.
+Report history stays in local storage in the current browser. Cookies and other HTTP headers are excluded from saved/exported reports, but request URLs and query parameters remain. Clear saved reports on shared devices. If storage is unavailable or full, a visible notice explains that the report is available only for the current session.
 
-#### Request Payload
+Canceling or starting a replacement run aborts the client fetch and ignores late responses. Cancellation does not terminate an already running server-side capture.
+
+The URL guards reject non-HTTP protocols, embedded credentials, loopback/private/link-local addresses and several special-use ranges. Server DNS checks also apply to browser requests, static resource fetches and HTTP redirect destinations. These checks are defense in depth: deploy the crawler in an isolated environment with outbound private-network access blocked, since DNS checks alone do not pin the actual connection against DNS rebinding. Add authentication/rate limits at the hosting layer before exposing expensive captures broadly.
+
+## Architecture
+
+| Area                              | Responsibility                                                        |
+| --------------------------------- | --------------------------------------------------------------------- |
+| `app/api/analyze/route.ts`        | Target validation, browser/fallback selection and result assembly     |
+| `crawler/`                        | Browser network lifecycle capture and bounded HTTP inspection         |
+| `engine/`                         | Normalization, ten audit rules and deterministic scoring              |
+| `lib/url.ts`, `lib/safe-fetch.ts` | URL validation, DNS checks and redirect validation                    |
+| `lib/reports.ts`                  | Header-free reports, safe CSV and comparison matching                 |
+| `store/analysis-store.ts`         | Cancellation, stale-run protection, local history and request filters |
+| `components/`                     | Landing, reports, waterfall, request explorer and modal inspector     |
+
+## API
+
+`POST /api/analyze` accepts `{ "url": "https://example.com" }`.
+
+On success it returns `{ "success": true, "result": ... }`. The result includes `summary`, `resources`, `requests`, `issues`, `timing`, and capture metadata:
+
 ```json
 {
-  "url": "https://example.com"
-}
-```
-
-#### Response (`200 OK`)
-```json
-{
-  "success": true,
-  "result": {
-    "url": "https://example.com",
-    "domain": "example.com",
-    "timestamp": "2026-08-12T11:00:00.000Z",
-    "summary": {
-      "score": 92,
-      "scoreCategory": "Excellent",
-      "requestCount": 24,
-      "totalTransferSize": 1420000,
-      "totalDuration": 1250,
-      "failedRequests": 0,
-      "thirdPartyRequests": 3
-    },
-    "resources": {
-      "document": 1,
-      "scripts": 8,
-      "stylesheets": 3,
-      "images": 10,
-      "fonts": 2,
-      "api": 0,
-      "other": 0
-    },
-    "requests": [ ... ],
-    "issues": [ ... ],
-    "timing": { ... }
+  "capture": {
+    "mode": "browser",
+    "finalUrl": "https://example.com/",
+    "warnings": ["Capture scope and measurement limitations..."]
   }
 }
 ```
 
----
-
-## 🎨 UI & Frontend Architecture
-
-The user interface follows a high-contrast, developer-tool design system:
-
-- **Typography System**: `Plus Jakarta Sans` for UI copy and headings; `JetBrains Mono` for network payloads, HTTP status codes, and code blocks.
-- **Layout Grid**: 1px Hairline border grid structure separating hero sections, metric cards, and data panels.
-- **Color Palette**: High-contrast black and white palette (`#ffffff` canvas, `#0f172a` text, `#e2e8f0` borders) with semantic status accents (`emerald` for clean, `amber` for warning, `rose` for critical/failed).
-
----
-
-## 📜 License
-
-Distributed under the MIT License. Built for developer performance intelligence.
+Invalid/restricted targets return 400; unreachable fallback targets return 502. The server never substitutes a fabricated successful report for an unreachable document.

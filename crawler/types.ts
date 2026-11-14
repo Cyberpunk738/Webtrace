@@ -1,7 +1,8 @@
-import { RawCapturedEvent } from '../types/network';
+import { RawCapturedEvent } from "../types/network";
 
 export interface CrawlerProgress {
-  stage: 'launching' | 'loading' | 'capturing' | 'analyzing' | 'complete' | 'error';
+  stage:
+    "launching" | "loading" | "capturing" | "analyzing" | "complete" | "error";
   message: string;
   timestamp: number;
 }
@@ -14,6 +15,8 @@ export interface CrawlerOptions {
 }
 
 export interface CrawlerCaptureResult {
+  mode?: "browser" | "http";
+  warnings?: string[];
   targetUrl: string;
   finalUrl: string;
   timing: {

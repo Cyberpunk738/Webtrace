@@ -1,213 +1,144 @@
-import { CrawlerCaptureResult } from './types';
-import { RawCapturedEvent, ResourceType } from '../types/network';
+import { CrawlerCaptureResult } from "./types";
+import { RawCapturedEvent, ResourceType } from "../types/network";
+import { safeFetch } from "../lib/safe-fetch";
 
+// Static HTTP inspection: scripts and browser rendering are never simulated.
 export async function captureNetworkActivityFallback(
-  targetUrl: string
+  targetUrl: string,
 ): Promise<CrawlerCaptureResult> {
-  const navStartTime = Date.now();
+  const started = Date.now();
   const rawEvents: RawCapturedEvent[] = [];
-  let requestCounter = 0;
-
-  const targetDomain = new URL(targetUrl).hostname;
-
-  // 1. Fetch Main Document
-  const docStart = 0;
-  let status = 200;
-  let statusText = 'OK';
-  let transferSize = 0;
-  let responseHeaders: Record<string, string> = {};
-  let htmlContent = '';
-  let failed = false;
-  let failureReason: string | undefined;
-
-  try {
-    const res = await fetch(targetUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 WebTrace/1.0',
-      },
-      redirect: 'follow',
-    });
-
-    const docEnd = Math.max(10, Date.now() - navStartTime);
-    status = res.status;
-    statusText = res.statusText;
-
-    res.headers.forEach((val, key) => {
-      responseHeaders[key.toLowerCase()] = val;
-    });
-
-    htmlContent = await res.text();
-    transferSize = new TextEncoder().encode(htmlContent).length;
-
-    if (status >= 400) {
-      failed = true;
-      failureReason = `HTTP ${status} ${statusText}`;
+  const signal = AbortSignal.timeout(18000);
+  const doc = await safeFetch(targetUrl, { signal });
+  const html = await readLimitedBody(doc, 2 * 1024 * 1024);
+  const finalUrl = doc.url || targetUrl;
+  rawEvents.push({
+    requestId: "http_document",
+    url: finalUrl,
+    method: "GET",
+    resourceType: "document",
+    status: doc.status,
+    statusText: doc.statusText,
+    startTime: 0,
+    endTime: Date.now() - started,
+    transferSize: html.byteLength,
+    responseHeaders: Object.fromEntries(doc.headers),
+    mimeType: doc.headers.get("content-type")?.split(";")[0],
+    failed: doc.status >= 400,
+    failureReason: doc.status >= 400 ? `HTTP ${doc.status}` : undefined,
+  });
+  const resources = new Map<string, ResourceType>();
+  const content = new TextDecoder().decode(html);
+  if (doc.headers.get("content-type")?.includes("text/html")) {
+    for (const tag of content.matchAll(/<(script|link|img)\b[^>]*>/gi)) {
+      const attr = (name: string) =>
+        tag[0].match(
+          new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, "i"),
+        )?.[1];
+      const type: ResourceType =
+        tag[1].toLowerCase() === "script"
+          ? "script"
+          : tag[1].toLowerCase() === "img"
+            ? "image"
+            : "stylesheet";
+      if (type === "stylesheet" && attr("rel")?.toLowerCase() !== "stylesheet")
+        continue;
+      const src = attr(type === "stylesheet" ? "href" : "src");
+      if (!src) continue;
+      try {
+        const url = new URL(src, finalUrl);
+        if (/^https?:$/.test(url.protocol)) resources.set(url.href, type);
+      } catch {
+        /* skip malformed references */
+      }
     }
-
-    requestCounter++;
-    rawEvents.push({
-      requestId: `req_${requestCounter}_doc`,
-      url: targetUrl,
-      method: 'GET',
-      resourceType: 'document',
-      status,
-      statusText,
-      startTime: docStart,
-      endTime: docEnd,
-      transferSize,
-      requestHeaders: {},
-      responseHeaders,
-      mimeType: responseHeaders['content-type']?.split(';')[0] || 'text/html',
-      failed,
-      failureReason,
-    });
-  } catch (err: unknown) {
-    const docEnd = Math.max(10, Date.now() - navStartTime);
-    requestCounter++;
-    rawEvents.push({
-      requestId: `req_${requestCounter}_doc`,
-      url: targetUrl,
-      method: 'GET',
-      resourceType: 'document',
-      status: 0,
-      statusText: 'ERR_FAILED',
-      startTime: docStart,
-      endTime: docEnd,
-      transferSize: 0,
-      requestHeaders: {},
-      responseHeaders: {},
-      mimeType: 'text/html',
-      failed: true,
-      failureReason: err instanceof Error ? err.message : 'Network fetch failed',
-    });
-    return {
-      targetUrl,
-      finalUrl: targetUrl,
-      timing: {
-        navigationStart: 0,
-        firstRequestTime: 0,
-        lastResponseTime: docEnd,
-        totalLoadTime: docEnd,
-      },
-      rawEvents,
-    };
   }
-
-  // 2. Parse subresources from HTML (scripts, stylesheets, images)
-  const resourceUrls: { url: string; type: ResourceType }[] = [];
-
-  // Extract <script src="...">
-  const scriptRegex = /<script[^>]+src=["']([^"']+)["']/gi;
-  let match;
-  while ((match = scriptRegex.exec(htmlContent)) !== null) {
-    if (match[1]) resourceUrls.push({ url: match[1], type: 'script' });
-  }
-
-  // Extract <link rel="stylesheet" href="...">
-  const cssRegex = /<link[^>]+rel=["']stylesheet["'][^>]+href=["']([^"']+)["']/gi;
-  while ((match = cssRegex.exec(htmlContent)) !== null) {
-    if (match[1]) resourceUrls.push({ url: match[1], type: 'stylesheet' });
-  }
-
-  // Extract <img src="...">
-  const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
-  while ((match = imgRegex.exec(htmlContent)) !== null) {
-    if (match[1]) resourceUrls.push({ url: match[1], type: 'image' });
-  }
-
-  // Deduplicate resource URLs (max 30 resources)
-  const uniqueResources = Array.from(
-    new Set(resourceUrls.map((r) => JSON.stringify(r)))
-  )
-    .map((s) => JSON.parse(s) as { url: string; type: ResourceType })
-    .slice(0, 30);
-
-  // 3. Concurrently profile detected subresources
-  let offsetCounter = rawEvents[0].endTime + 15;
+  const entries = [...resources].slice(0, 30);
+  let cursor = 0;
   await Promise.all(
-    uniqueResources.map(async (resItem) => {
-      let resolvedUrl = resItem.url;
-      try {
-        resolvedUrl = new URL(resItem.url, targetUrl).href;
-      } catch {
-        return;
-      }
-
-      const reqStart = offsetCounter;
-      offsetCounter += Math.floor(Math.random() * 20) + 10;
-
-      try {
-        const subRes = await fetch(resolvedUrl, {
-          method: 'HEAD',
-          headers: {
-            'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 WebTrace/1.0',
-          },
-        }).catch(() => null);
-
-        const reqEnd = reqStart + Math.floor(Math.random() * 80) + 20;
-
-        requestCounter++;
-        if (subRes) {
-          const subHeaders: Record<string, string> = {};
-          subRes.headers.forEach((v, k) => {
-            subHeaders[k.toLowerCase()] = v;
-          });
-
-          const cLen = subHeaders['content-length'];
-          const subSize = cLen && !isNaN(Number(cLen)) ? parseInt(cLen, 10) : 15000;
-
-          rawEvents.push({
-            requestId: `req_${requestCounter}_${resItem.type}`,
-            url: resolvedUrl,
-            method: 'GET',
-            resourceType: resItem.type,
-            status: subRes.status,
-            statusText: subRes.statusText,
-            startTime: reqStart,
-            endTime: reqEnd,
-            transferSize: subSize,
-            requestHeaders: {},
-            responseHeaders: subHeaders,
-            mimeType: subHeaders['content-type']?.split(';')[0] || '',
-            failed: subRes.status >= 400,
-            failureReason: subRes.status >= 400 ? `HTTP ${subRes.status}` : undefined,
-          });
-        } else {
-          rawEvents.push({
-            requestId: `req_${requestCounter}_${resItem.type}`,
-            url: resolvedUrl,
-            method: 'GET',
-            resourceType: resItem.type,
-            status: 200,
-            statusText: 'OK',
-            startTime: reqStart,
-            endTime: reqEnd,
-            transferSize: 12500,
-            requestHeaders: {},
-            responseHeaders: {},
-            mimeType: '',
-            failed: false,
-          });
+    Array.from({ length: Math.min(4, entries.length) }, async () => {
+      while (cursor < entries.length) {
+        const index = cursor++;
+        const [url, resourceType] = entries[index];
+        const event: RawCapturedEvent = {
+          requestId: `http_${index}`,
+          url,
+          method: "GET",
+          resourceType,
+          status: null,
+          startTime: Date.now() - started,
+          endTime: 0,
+          transferSize: 0,
+          failed: false,
+        };
+        try {
+          const res = await safeFetch(url, { signal });
+          event.status = res.status;
+          event.statusText = res.statusText;
+          event.responseHeaders = Object.fromEntries(res.headers);
+          event.mimeType = res.headers.get("content-type")?.split(";")[0];
+          event.transferSize = (
+            await readLimitedBody(res, 8 * 1024 * 1024)
+          ).byteLength;
+          event.failed = res.status >= 400;
+          if (event.failed) event.failureReason = `HTTP ${res.status}`;
+        } catch (error) {
+          event.failed = true;
+          event.failureReason =
+            error instanceof Error ? error.message : "Resource fetch failed";
         }
-      } catch {
-        // ignore individual subresource errors
+        event.endTime = Date.now() - started;
+        rawEvents.push(event);
       }
-    })
+    }),
   );
-
-  const totalLoadTime = Math.max(0, Date.now() - navStartTime);
-
+  const totalLoadTime = Date.now() - started;
   return {
     targetUrl,
-    finalUrl: targetUrl,
+    finalUrl,
+    mode: "http",
+    warnings: [
+      "Limited HTTP inspection: JavaScript was not executed. Dynamic requests, CSS dependencies and browser rendering are excluded. Timings describe server fetches, not page load speed. Sizes are decoded response bytes.",
+      ...(resources.size > 30
+        ? ["Only the first 30 static resources were inspected."]
+        : []),
+    ],
     timing: {
       navigationStart: 0,
-      firstRequestTime: rawEvents[0]?.startTime || 0,
+      firstRequestTime: 0,
       lastResponseTime: totalLoadTime,
       totalLoadTime,
     },
-    rawEvents,
+    rawEvents: rawEvents.sort((a, b) => a.startTime - b.startTime),
   };
+}
+
+async function readLimitedBody(
+  response: Response,
+  limit: number,
+): Promise<Uint8Array> {
+  const reader = response.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit)
+        throw new Error("Response exceeded inspection size limit");
+      chunks.push(value);
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  const body = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
 }
