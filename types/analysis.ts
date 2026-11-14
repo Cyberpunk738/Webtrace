@@ -1,9 +1,9 @@
-import { NetworkRequest } from './network';
-import { PerformanceIssue } from './issues';
+import { NetworkRequest } from "./network";
+import { PerformanceIssue } from "./issues";
 
 export interface AnalysisSummary {
   score: number;
-  scoreCategory: 'Excellent' | 'Good' | 'Needs Improvement' | 'Poor';
+  scoreCategory: "Excellent" | "Good" | "Needs Improvement" | "Poor";
   requestCount: number;
   totalTransferSize: number;
   totalDuration: number;
@@ -29,6 +29,7 @@ export interface AnalysisTiming {
 }
 
 export interface AnalysisResult {
+  capture?: { mode: "browser" | "http"; finalUrl: string; warnings: string[] };
   url: string;
   domain: string;
   timestamp: string;

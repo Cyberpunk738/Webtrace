@@ -1,129 +1,162 @@
-import { create } from 'zustand';
-import { AnalysisResult } from '../types/analysis';
-import { ResourceType } from '../types/network';
+import { create } from "zustand";
+import { AnalysisResult } from "../types/analysis";
+import { ResourceType } from "../types/network";
+import { HISTORY_KEY, MAX_REPORTS, portableReport } from "../lib/reports";
 
-export type FilterCategory = ResourceType | 'all' | 'failed' | 'third-party';
+export type FilterCategory = ResourceType | "all" | "failed" | "third-party";
+const cleanView = {
+  selectedRequestId: null,
+  filterType: "all" as FilterCategory,
+  searchQuery: "",
+  sortBy: "duration" as const,
+  sortOrder: "desc" as const,
+};
+let activeController: AbortController | null = null;
 
 export interface AnalysisState {
   url: string;
-  status: 'idle' | 'analyzing' | 'complete' | 'error';
-  stage: 'launching' | 'loading' | 'capturing' | 'analyzing' | 'complete';
-  stageMessage: string;
+  status: "idle" | "analyzing" | "complete" | "error";
   error: string | null;
   result: AnalysisResult | null;
+  history: AnalysisResult[];
+  storageNotice: string | null;
   selectedRequestId: string | null;
   filterType: FilterCategory;
   searchQuery: string;
-  sortBy: 'name' | 'size' | 'duration' | 'status';
-  sortOrder: 'asc' | 'desc';
-
-  // Actions
+  sortBy: "name" | "size" | "duration" | "status";
+  sortOrder: "asc" | "desc";
   setUrl: (url: string) => void;
-  startAnalysis: (inputUrl: string) => Promise<void>;
+  startAnalysis: (url: string) => Promise<void>;
   setSelectedRequestId: (id: string | null) => void;
   setFilterType: (filter: FilterCategory) => void;
   setSearchQuery: (query: string) => void;
-  setSorting: (sortBy: 'name' | 'size' | 'duration' | 'status') => void;
+  setSorting: (sort: AnalysisState["sortBy"]) => void;
   reset: () => void;
+  loadHistory: () => void;
+  openReport: (report: AnalysisResult) => void;
+  clearHistory: () => void;
 }
 
-export const useAnalysisStore = create<AnalysisState>((set) => ({
-  url: '',
-  status: 'idle',
-  stage: 'launching',
-  stageMessage: '',
+export const useAnalysisStore = create<AnalysisState>((set, get) => ({
+  url: "",
+  status: "idle",
   error: null,
   result: null,
-  selectedRequestId: null,
-  filterType: 'all',
-  searchQuery: '',
-  sortBy: 'duration',
-  sortOrder: 'desc',
-
+  history: [],
+  storageNotice: null,
+  ...cleanView,
   setUrl: (url) => set({ url }),
-
   setSelectedRequestId: (selectedRequestId) => set({ selectedRequestId }),
   setFilterType: (filterType) => set({ filterType }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
-
   setSorting: (sortBy) =>
     set((state) => ({
       sortBy,
-      sortOrder: state.sortBy === sortBy && state.sortOrder === 'desc' ? 'asc' : 'desc',
+      sortOrder:
+        state.sortBy === sortBy && state.sortOrder === "desc" ? "asc" : "desc",
     })),
-
-  reset: () =>
-    set({
-      status: 'idle',
-      stage: 'launching',
-      stageMessage: '',
-      error: null,
-      result: null,
-      selectedRequestId: null,
-      filterType: 'all',
-      searchQuery: '',
-    }),
-
-  startAnalysis: async (inputUrl: string) => {
-    set({
-      url: inputUrl,
-      status: 'analyzing',
-      stage: 'launching',
-      stageMessage: 'Launching Chromium Browser...',
-      error: null,
-      result: null,
-      selectedRequestId: null,
-    });
-
-    // Simulate meaningful progress stages for UX transparency
-    const timer1 = setTimeout(() => {
-      set((s) => (s.status === 'analyzing' ? { stage: 'loading', stageMessage: `Loading page content...` } : s));
-    }, 1200);
-
-    const timer2 = setTimeout(() => {
-      set((s) => (s.status === 'analyzing' ? { stage: 'capturing', stageMessage: `Capturing network events & timings...` } : s));
-    }, 4500);
-
-    const timer3 = setTimeout(() => {
-      set((s) => (s.status === 'analyzing' ? { stage: 'analyzing', stageMessage: `Evaluating performance rules...` } : s));
-    }, 12000);
-
+  reset: () => {
+    activeController?.abort();
+    activeController = null;
+    set({ status: "idle", error: null, result: null, ...cleanView });
+  },
+  loadHistory: () => {
     try {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: inputUrl }),
-      });
-
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        set({
-          status: 'error',
-          error: data.error || 'Failed to complete website analysis.',
-        });
-        return;
-      }
-
-      set({
-        status: 'complete',
-        stage: 'complete',
-        stageMessage: 'Analysis complete',
-        result: data.result,
-      });
+      const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      // Corrupt or old storage should never prevent a new analysis.
+      const history = Array.isArray(stored)
+        ? stored
+            .filter(
+              (r) =>
+                r &&
+                typeof r.url === "string" &&
+                typeof r.timestamp === "string" &&
+                r.summary &&
+                Array.isArray(r.requests) &&
+                Array.isArray(r.issues) &&
+                r.resources &&
+                r.timing,
+            )
+            .slice(0, MAX_REPORTS)
+        : [];
+      set({ history });
     } catch {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-
       set({
-        status: 'error',
-        error: 'Network error communicating with analysis backend service.',
+        history: [],
+        storageNotice: "Saved reports are unavailable in this browser.",
       });
+    }
+  },
+  openReport: (result) => {
+    activeController?.abort();
+    activeController = null;
+    set({
+      result,
+      url: result.url,
+      status: "complete",
+      error: null,
+      ...cleanView,
+    });
+  },
+  clearHistory: () => {
+    try {
+      localStorage.removeItem(HISTORY_KEY);
+      set({ history: [], storageNotice: null });
+    } catch {
+      set({ storageNotice: "This browser could not clear saved reports." });
+    }
+  },
+  startAnalysis: async (url) => {
+    activeController?.abort();
+    const controller = new AbortController();
+    activeController = controller;
+    const timeout = setTimeout(
+      () => controller.abort(new Error("Analysis timed out. Try again.")),
+      55000,
+    );
+    set({ url, status: "analyzing", error: null, result: null, ...cleanView });
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+        signal: controller.signal,
+      });
+      if (activeController !== controller) return;
+      const data = await response.json().catch(() => {
+        throw new Error(
+          "The server returned an unreadable response. Try again.",
+        );
+      });
+      if (activeController !== controller) return;
+      if (!response.ok || !data.success || !data.result)
+        throw new Error(data.error || "Unable to complete analysis.");
+      const result: AnalysisResult = data.result;
+      const history = [portableReport(result), ...get().history].slice(
+        0,
+        MAX_REPORTS,
+      );
+      let storageNotice = null;
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      } catch {
+        storageNotice =
+          "Report ready. Browser storage is full or unavailable; this report is kept for this session only.";
+      }
+      set({ result, history, storageNotice, status: "complete" });
+    } catch (error) {
+      if (activeController !== controller) return;
+      set({
+        status: "error",
+        error: controller.signal.aborted
+          ? "Analysis timed out. Try again or choose another website."
+          : error instanceof Error
+            ? error.message
+            : "Connection failed. Please try again.",
+      });
+    } finally {
+      clearTimeout(timeout);
+      if (activeController === controller) activeController = null;
     }
   },
 }));

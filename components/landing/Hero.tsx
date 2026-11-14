@@ -1,120 +1,257 @@
-'use client';
+"use client";
+import { useState } from "react";
+import {
+  ArrowDown,
+  ArrowUpRight,
+  Braces,
+  Globe2,
+  Zap,
+  MousePointer2,
+  Radio,
+  Layers3,
+} from "lucide-react";
+import { UrlInput } from "./UrlInput";
+import { ReportHistory } from "../analysis/ReportTools";
 
-import React from 'react';
-import Image from 'next/image';
-import { UrlInput } from './UrlInput';
-import { Network, Cpu, ShieldCheck, BarChart2 } from 'lucide-react';
+const features = [
+  {
+    title: "See every request.",
+    text: "Follow the network waterfall. Find the scripts, images and API calls holding your page back.",
+    Icon: Radio,
+    color: "yellow",
+    tag: "01 / INSPECT",
+  },
+  {
+    title: "Find the friction.",
+    text: "Turn captured requests into a focused list of bottlenecks, with practical fixes for each one.",
+    Icon: Zap,
+    color: "purple",
+    tag: "02 / UNDERSTAND",
+  },
+  {
+    title: "Track your progress.",
+    text: "Save recent reports in your browser, compare repeat runs and export the evidence.",
+    Icon: Layers3,
+    color: "pink",
+    tag: "03 / IMPROVE",
+  },
+];
+const steps = [
+  [
+    "Paste. Trace. Discover.",
+    "Enter a public website URL. WebTrace opens a browser and observes its network activity. If Chromium is unavailable, a clearly labeled HTTP inspection keeps you moving.",
+  ],
+  [
+    "Find your next fix.",
+    "Review resource sizes, slow requests and failures. Open a request to inspect its details, then use the audit recommendations to decide what to tackle first.",
+  ],
+  [
+    "Make the next run better.",
+    "Re-analyze the same URL after a change. Compare with the previous capture of the same type, then download a JSON report or a CSV request list.",
+  ],
+];
 
-export const Hero: React.FC = () => {
+export function Hero() {
+  const [step, setStep] = useState(0);
   return (
-    <section className="relative min-h-[calc(100vh-73px)] flex flex-col justify-between bg-white text-slate-900 overflow-hidden">
-      {/* Subtle Grid Background */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-60 pointer-events-none" />
-
-      {/* Main Split Hero Container */}
-      <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        {/* Left Column - Content & Action */}
-        <div className="lg:col-span-7 space-y-8 py-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1 text-[11px] font-mono font-medium text-slate-700 shadow-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-900 animate-pulse" />
-            <span>✦ SYNCING REAL-TIME BROWSER TELEMETRY</span>
-          </div>
-
-          <div className="space-y-4">
-            <h1 className="text-4xl sm:text-6xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.06]">
-              The pipeline <br />
-              that runs itself
-            </h1>
-
-            <p className="max-w-xl text-base sm:text-lg text-slate-600 font-sans leading-relaxed">
-              WebTrace loads any website in a real Chromium browser, captures 100% of network activity, normalizes request telemetry, and identifies exact performance bottlenecks — real time, zero guesswork.
-            </p>
-          </div>
-
-          {/* Action Form */}
-          <div className="pt-2">
-            <UrlInput />
-          </div>
+    <div className="landing">
+      <section className="trace-hero">
+        <div className="hero-kicker">
+          <span className="live-dot" /> YOUR WEBSITE HAS A STORY. FOLLOW THE
+          TRACE.
         </div>
-
-        {/* Right Column - 3D Visual Asset (Mobius White Theme Sculpture Display) */}
-        <div className="lg:col-span-5 relative flex items-center justify-center">
-          <div className="relative w-full aspect-square max-w-md mx-auto rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-2xl overflow-hidden group">
-            {/* Tech Grid Corners */}
-            <div className="absolute top-3 left-3 text-[9px] font-mono text-slate-400 z-10 uppercase tracking-wider">
-              SYS::PLAYWRIGHT_ENGINE
-            </div>
-            <div className="absolute bottom-3 right-3 text-[9px] font-mono text-slate-400 z-10 uppercase tracking-wider">
-              SUB_MS_PRECISION
-            </div>
-
-            <div className="relative w-full h-full rounded-xl overflow-hidden bg-white flex items-center justify-center border border-slate-200">
-              <Image
-                src="/hero-3d-white.png"
-                alt="WebTrace 3D Telemetry Network Sculpture"
-                fill
-                priority
-                className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-              />
-
-              {/* Status Badge Tag */}
-              <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 backdrop-blur-md shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span className="font-mono text-xs font-bold text-slate-900">10 Audit Rules Active</span>
+        <div className="hero-title-wrap">
+          <span className="hero-sticker globe-sticker" aria-hidden="true">
+            <Globe2 />
+          </span>
+          <h1 className="display hero-title">
+            SMALL REQUESTS.
+            <br />
+            <span className="yellow-text">BIG IMPACT.</span>
+            <br />
+            <span className="outline-text">MAKE IT</span>{" "}
+            <span className="purple-text">FAST.</span>
+          </h1>
+          <span className="hero-sticker bolt-sticker" aria-hidden="true">
+            <Zap />
+          </span>
+          <span className="round-sticker" aria-hidden="true">
+            <ArrowUpRight />
+            FOLLOW
+            <br />
+            THE TRACE
+          </span>
+          <span className="cursor-sticker" aria-hidden="true">
+            <MousePointer2 />
+          </span>
+        </div>
+        <p className="hero-description">
+          Get under the hood of any public website.
+          <br className="hidden sm:block" /> Uncover heavy assets, slow calls
+          and the fixes that matter.
+        </p>
+        <UrlInput />
+        <div className="hero-footnote">
+          <span>REAL REQUESTS</span>
+          <span>10 AUDIT RULES</span>
+          <span>NO SIGN-UP</span>
+        </div>
+        <a href="#toolkit" className="scroll-link">
+          MEET YOUR NEW TOOLKIT <ArrowDown size={14} />
+        </a>
+      </section>
+      <section id="toolkit" className="toolkit-section">
+        <div className="section-heading">
+          <h2 className="display">
+            LESS MYSTERY.
+            <br />
+            MORE <span className="label-sticker green-sticker">CLARITY.</span>
+          </h2>
+          <p>
+            Everything you need to understand
+            <br />
+            what your website is really loading.
+          </p>
+        </div>
+        <div className="feature-grid">
+          {features.map(({ title, text, Icon, color, tag }) => (
+            <article key={title} className={`feature-card ${color}-card`}>
+              <span className="feature-tag">{tag}</span>
+              <div className="feature-illustration" aria-hidden="true">
+                <div className="illustration-orbit" />
+                <Icon />
+                <span className="little-star">✦</span>
               </div>
+              <h3>{title}</h3>
+              <p>{text}</p>
+              <ArrowUpRight className="feature-arrow" size={22} />
+            </article>
+          ))}
+        </div>
+        <ReportHistory />
+        <div className="section-heading how-heading">
+          <h2 className="display">
+            YOUR NEXT <span className="green-text">“AHA!”</span>
+            <br />
+            IS JUST ONE TRACE AWAY.
+          </h2>
+          <Braces className="how-icon" aria-hidden="true" />
+        </div>
+        <div
+          className="how-tabs"
+          role="tablist"
+          aria-label="How WebTrace works"
+        >
+          {["Capture", "Investigate", "Improve"].map((label, index) => (
+            <button
+              key={label}
+              id={`step-${index}`}
+              role="tab"
+              aria-selected={step === index}
+              aria-controls="step-panel"
+              tabIndex={step === index ? 0 : -1}
+              onKeyDown={(e) => {
+                if (["ArrowRight", "ArrowLeft"].includes(e.key)) {
+                  e.preventDefault();
+                  const next = (step + (e.key === "ArrowRight" ? 1 : 2)) % 3;
+                  setStep(next);
+                  document.getElementById(`step-${next}`)?.focus();
+                }
+              }}
+              onClick={() => setStep(index)}
+            >
+              {`0${index + 1}`} <span>{label}</span>
+            </button>
+          ))}
+        </div>
+        <div
+          id="step-panel"
+          className={`how-panel step-${step}`}
+          role="tabpanel"
+          aria-labelledby={`step-${step}`}
+        >
+          <div>
+            <span className="eyebrow">FROM URL TO UNDERSTANDING</span>
+            <h3 className="display">{steps[step][0]}</h3>
+            <p>{steps[step][1]}</p>
+            <button
+              className="ink-button"
+              onClick={() => {
+                document.getElementById("target-url")?.focus();
+                document
+                  .getElementById("target-url")
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            >
+              Start your trace <ArrowUpRight size={16} />
+            </button>
+          </div>
+          <div className="mini-browser" aria-hidden="true">
+            <div className="mini-browser-bar">
+              <i />
+              <i />
+              <i />
+              <span>THE NETWORK, UNPACKED.</span>
             </div>
+            <div className="mini-stat">
+              <span>EVERY MILLISECOND COUNTS</span>
+              <Zap />
+              <strong>
+                Make room
+                <br />
+                for speed.
+              </strong>
+            </div>
+            <div className="mini-waterfall">
+              {[26, 55, 38, 76, 46].map((n, i) => (
+                <div key={i}>
+                  <span>
+                    {
+                      [
+                        "index.html",
+                        "app.js",
+                        "styles.css",
+                        "hero.webp",
+                        "api/data",
+                      ][i]
+                    }
+                  </span>
+                  <i style={{ marginLeft: `${i * 6}px`, width: `${n}%` }} />
+                </div>
+              ))}
+            </div>
+            <span className="demo-label">ILLUSTRATION / NOT LIVE DATA</span>
           </div>
         </div>
-      </div>
-
-      {/* Mobius-Style Hairline Border 4-Column Feature Grid (Bottom of Hero) */}
-      <div id="platform" className="relative border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
-          <div className="p-6 sm:p-8 space-y-2">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <Network className="h-5 w-5 text-slate-900" />
-              <span className="font-mono text-[10px] text-slate-400">01</span>
-            </div>
-            <h3 className="font-sans text-sm font-bold text-slate-900">Real-time Telemetry</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Capture 100% of HTTP status codes, exact durations, headers, and transfer sizes via Playwright.
-            </p>
-          </div>
-
-          <div className="p-6 sm:p-8 space-y-2">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <Cpu className="h-5 w-5 text-slate-900" />
-              <span className="font-mono text-[10px] text-slate-400">02</span>
-            </div>
-            <h3 className="font-sans text-sm font-bold text-slate-900">10 Audit Rules</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Every request analyzed for heavy JS/CSS bundles, unoptimized images, API lag, and 3rd party bloat.
-            </p>
-          </div>
-
-          <div className="p-6 sm:p-8 space-y-2">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <BarChart2 className="h-5 w-5 text-slate-900" />
-              <span className="font-mono text-[10px] text-slate-400">03</span>
-            </div>
-            <h3 className="font-sans text-sm font-bold text-slate-900">D3 Gantt Waterfall</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Interactive timeline visualization mapping asset loading sequence and timing bottlenecks.
-            </p>
-          </div>
-
-          <div className="p-6 sm:p-8 space-y-2">
-            <div className="flex items-center justify-between text-slate-400 mb-3">
-              <ShieldCheck className="h-5 w-5 text-slate-900" />
-              <span className="font-mono text-[10px] text-slate-400">04</span>
-            </div>
-            <h3 className="font-sans text-sm font-bold text-slate-900">SSRF Protected</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Strict protocol enforcement and private IP blocklists ensuring zero intranet security vulnerability.
-            </p>
-          </div>
+      </section>
+      <footer className="landing-footer">
+        <span className="eyebrow">BUILD BETTER. SHIP FASTER.</span>
+        <h2 className="display">
+          GOOD WEBSITES
+          <br />
+          LEAVE <span>GREAT TRACES.</span>
+        </h2>
+        <button
+          className="ink-button"
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            document.getElementById("target-url")?.focus();
+          }}
+        >
+          Find yours <ArrowUpRight size={18} />
+        </button>
+        <div className="footer-bottom">
+          <strong>WEBTRACE®</strong>
+          <span>Website performance, made visible.</span>
+          <a
+            href="https://github.com/Cyberpunk738/Webtrace"
+            target="_blank"
+            rel="noreferrer"
+          >
+            View source ↗
+          </a>
         </div>
-      </div>
-    </section>
+      </footer>
+    </div>
   );
-};
+}

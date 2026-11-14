@@ -6,8 +6,10 @@
     "dev": "node node_modules/next/dist/bin/next dev",
     "build": "node node_modules/next/dist/bin/next build",
     "start": "node node_modules/next/dist/bin/next start",
-    "lint": "node node_modules/next/dist/bin/next lint",
-    "test": "npx tsx tests/run-tests.ts"
+    "test": "node --import tsx tests/run-tests.ts && node --import tsx --test tests/reliability.test.ts",
+    "typecheck": "tsc --noEmit",
+    "test:browser": "node --import tsx tests/browser-smoke.ts",
+    "test:capture": "node --import tsx tests/browser-capture.ts"
   },
   "dependencies": {
     "@sparticuz/chromium": "^149.0.0",
